@@ -15,20 +15,22 @@ Frontend: React, Vite
 Backend: Go
 Database: PostgreSQL
 Reverse Proxy: NGINX
-Containerization: Docker & Docker Compose
+Containerization: Kubernetes
+change server ip here :
+/3-tier-Devboard-application/frontend/vite.config.js:17:        target: 'http://20.11.56.232:8080',
 📂 Project Structure
 .
 ├── backend/              # Go API (main.go + Dockerfile)
 ├── frontend/             # React app (Vite). Serves the UI, forwards /api
 ├── init/postgres/        # Schema + example data, loaded on first start
 ├── nginx.conf            # Reverse proxy configuration
-├── docker-compose.yml    # Service orchestration
+├── k8s/                  # All kubernetes yaml files
 ├── Makefile              # Short commands (make up, make down, ...)
 ├── .env.example          # Template for settings (copy to .env)
 └── README.md             # Project documentation
 ⚙️ Setup & Usage Clone the repository
 
-git clone https://github.com/nikscool24/3-tier-Devboard-application.git cd 3-tier-Devboard-application
+git clone https://github.com/syednaqvi3/Dev-Board-Application.git cd 3-tier-Devboard-application
 
 Configure environment variables
 
@@ -36,7 +38,7 @@ POSTGRES_USER=youruser POSTGRES_PASSWORD=yourpassword POSTGRES_DB=yourdb POSTGRE
 
 BACKEND_HOST_PORT=8081 BACKEND_CONTAINER_PORT=8080
 
-FRONTEND_HOST_PORT=8080 FRONTEND_CONTAINER_PORT=4173
+FRONTEND_HOST_PORT=80 FRONTEND_CONTAINER_PORT=80
 
 NGINX_HOST_PORT=80 NGINX_CONTAINER_PORT=80
 
@@ -44,24 +46,23 @@ Note: Dockerfiles for both the frontend and backend are present in their respect
 
 Build and run
 
-docker compose up --build
-
 Access the app Frontend: http://localhost Backend API: http://localhost/api Database: PostgreSQL on localhost:5432
 
 NGINX Reverse Proxy Routing configuration file nginx.conf is present at the root directory:
 
-http { upstream frontend { server frontend:4173; }
+events {}
 
-upstream backend { server backend:8080; }
+http {
+  server {
+    listen 80;
 
-server { listen 80;
+    location / {
+      proxy_pass http://frontend:80;
+    }
 
-location / {
-  proxy_pass http://frontend;
+    location /api/ {
+      rewrite ^/api/(.*)$ /$1 break;
+      proxy_pass http://backend:8080;
+    }
+  }
 }
-
-location /api {
-  rewrite ^/api/(.*)$ /$1 break;
-  proxy_pass http://backend;
-}
-} }
